@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Study Efficiency Tracker</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  --bg:#f4f6fa;--surface:#fff;--ink:#101828;--muted:#566175;--line:#d5dbe6;
+  --accent:#2f4bd8;--accent-ink:#fff;
+  --good:#15803d;--good-bg:#dcf5e4;--mid:#a16207;--mid-bg:#fdf0c4;--bad:#b42318;--bad-bg:#fde3e0;
+  --nav-bg:rgba(255,255,255,.72);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1320;--surface:#171e30;--ink:#eef1f8;--muted:#a1abc2;--line:#2c3550;
+    --accent:#7d92ff;--accent-ink:#0e1320;
+    --good:#5fd88a;--good-bg:#12331f;--mid:#f1c24f;--mid-bg:#3a2f0e;--bad:#ff8a7e;--bad-bg:#40191a;
+    --nav-bg:rgba(23,30,48,.7);color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.app{max-width:480px;margin:0 auto;padding:20px 16px calc(110px + env(safe-area-inset-bottom,0px))}
+h1{font-size:1.5rem;line-height:1.2;margin:4px 0 2px;letter-spacing:-.01em}
+.sub{margin:0 0 20px;color:var(--muted);font-size:.95rem}
+.panel{display:none;opacity:0;transform:translateY(6px);transition:opacity .25s ease,transform .25s ease}
+.panel.active{display:block}
+.panel.show{opacity:1;transform:none}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row.three{grid-template-columns:1fr 1fr 1fr}
+label{display:block;font-size:.9rem;font-weight:600;margin-bottom:6px}
+.field{margin-bottom:14px}.field:last-child{margin-bottom:0}
+input[type=time],input[type=number]{width:100%;min-height:48px;padding:10px 12px;font:inherit;font-size:1.05rem;
+  color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;transition:border-color .2s,box-shadow .2s}
+input:focus-visible,button:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+input[type=range]{width:100%;min-height:44px;accent-color:var(--accent)}
+.hint{font-size:.82rem;color:var(--muted);margin-top:6px}
+.inline{display:flex;gap:8px;align-items:stretch}
+.inline input{flex:1}
+.btn{min-height:48px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.btn:active{transform:scale(.97)}
+.target-head{display:flex;justify-content:space-between;align-items:baseline}
+.target-val{font-weight:700;font-size:1.2rem;color:var(--accent)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat{background:var(--bg);border-radius:12px;padding:12px}
+.stat span{display:block;font-size:.8rem;color:var(--muted)}
+.stat b{font-size:1.35rem;font-variant-numeric:tabular-nums}
+.big{font-size:3rem;font-weight:800;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.bar{height:14px;background:var(--bg);border-radius:99px;overflow:hidden;margin:14px 0;border:1px solid var(--line)}
+.fill{height:100%;width:0;border-radius:99px;background:var(--muted);transition:width .5s cubic-bezier(.2,.8,.2,1),background-color .3s}
+.badge{display:inline-block;padding:6px 14px;border-radius:99px;font-weight:700;font-size:.92rem;background:var(--bg);color:var(--muted);transition:background-color .3s,color .3s}
+.good .fill{background:var(--good)}.good .badge{background:var(--good-bg);color:var(--good)}
+.mid .fill{background:#e0a800}.mid .badge{background:var(--mid-bg);color:var(--mid)}
+.bad .fill{background:#d92d20}.bad .badge{background:var(--bad-bg);color:var(--bad)}
+.msg{border-radius:12px;padding:12px 14px;font-size:.92rem;background:var(--bad-bg);color:var(--bad);font-weight:600;margin-bottom:16px;display:none}
+.msg.on{display:block}
+.result{transition:opacity .25s}
+.verdict{border-radius:16px;padding:18px;border:1.5px solid var(--line);background:var(--surface);transition:background-color .3s,border-color .3s}
+.verdict h2{margin:0 0 6px;font-size:1.15rem}
+.verdict p{margin:6px 0 0}
+.verdict .big{margin:10px 0 2px}
+.verdict.good{background:var(--good-bg);border-color:var(--good)}
+.verdict.mid{background:var(--mid-bg);border-color:var(--mid)}
+.verdict.bad{background:var(--bad-bg);border-color:var(--bad)}
+.verdict.good h2{color:var(--good)}.verdict.mid h2{color:var(--mid)}.verdict.bad h2{color:var(--bad)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.facts div{background:color-mix(in srgb,var(--surface) 70%,transparent);border-radius:10px;padding:10px}
+.facts span{display:block;font-size:.78rem;color:var(--muted)}
+.facts b{font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);text-align:center;padding:24px 8px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;
+  padding:0 16px calc(12px + env(safe-area-inset-bottom,0px));pointer-events:none}
+.navbar{pointer-events:auto;width:100%;max-width:480px;display:flex;gap:6px;padding:6px;border-radius:22px;
+  background:var(--nav-bg);-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6);
+  border:1px solid var(--line);box-shadow:0 8px 28px rgba(16,24,40,.16)}
+.tab{flex:1;min-height:48px;border:0;border-radius:16px;background:transparent;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;transition:background-color .25s,color .25s}
+.tab.active{background:var(--accent);color:var(--accent-ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>Study Efficiency Tracker</h1>
+  <p class="sub" id="sub">Measure how much of your study window was truly focused.</p>
+
+  <!-- Calculator -->
+  <section class="panel active show" id="p-calc" aria-labelledby="t-calc">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label for="c-start">Start time</label><input type="time" id="c-start"></div>
+        <div class="field"><label for="c-end">End time</label><input type="time" id="c-end"></div>
+      </div>
+      <div class="field">
+        <label for="c-focus">Actual focused time (minutes)</label>
+        <input type="number" id="c-focus" inputmode="numeric" min="0" step="1" placeholder="e.g. 90">
+        <div class="hint">Sessions that pass midnight are handled automatically.</div>
+      </div>
+    </div>
+    <div class="msg" id="c-msg" role="alert"></div>
+    <div class="card result" id="c-res">
+      <div class="stats">
+        <div class="stat"><span>Total study window</span><b id="c-win">–</b></div>
+        <div class="stat"><span>Net focused time</span><b id="c-net">–</b></div>
+      </div>
+      <div class="big" id="c-pct">–</div>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="c-bar"><div class="fill" id="c-fill"></div></div>
+      <span class="badge" id="c-badge">Enter your session</span>
+    </div>
+  </section>
+
+  <!-- Recovery -->
+  <section class="panel" id="p-rec" aria-labelledby="t-rec">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label for="r-start">Session start</label><input type="time" id="r-start"></div>
+        <div class="field"><label for="r-end">Planned end</label><input type="time" id="r-end"></div>
+      </div>
+      <div class="field">
+        <label for="r-now">Current time</label>
+        <div class="inline"><input type="time" id="r-now"><button class="btn" id="r-live" type="button">Use now</button></div>
+        <div class="hint" id="r-live-hint">Following the live clock.</div>
+      </div>
+      <div class="field">
+        <label for="r-focus">Focused time so far (minutes)</label>
+        <input type="number" id="r-focus" inputmode="numeric" min="0" step="1" placeholder="e.g. 45">
+        <div class="hint" id="r-focus-hint"></div>
+      </div>
+      <div class="field">
+        <div class="target-head"><label for="r-target" style="margin:0">Target efficiency</label><span class="target-val" id="r-tval">80%</span></div>
+        <input type="range" id="r-target" min="1" max="100" step="1" value="80">
+      </div>
+    </div>
+    <div class="msg" id="r-msg" role="alert"></div>
+    <div class="result" id="r-res"><div class="card empty">Fill in your session times and focused minutes to see your plan.</div></div>
+  </section>
+</main>
+
+<nav><div class="navbar" role="tablist">
+  <button class="tab active" id="t-calc" role="tab" aria-selected="true" data-tab="calc" type="button">Calculator</button>
+  <button class="tab" id="t-rec" role="tab" aria-selected="false" data-tab="rec" type="button">Recovery</button>
+</div></nav>
+
+<script>
+(function(){
+  var KEY='study-efficiency-tracker:v1';
+  var $=function(id){return document.getElementById(id)};
+  var DAY=1440;
+  var state={tab:'calc',cStart:'',cEnd:'',cFocus:'',rStart:'',rEnd:'',rNow:'',rLive:true,rFocus:'',rTarget:'80'};
+
+  function load(){try{var s=localStorage.getItem(KEY);if(s){var o=JSON.parse(s);for(var k in o)if(k in state)state[k]=o[k];}}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+
+  function toMin(v){if(!v||v.indexOf(':')<0)return null;var p=v.split(':');var h=+p[0],m=+p[1];return isNaN(h)||isNaN(m)?null:h*60+m;}
+  function diff(a,b){return ((b-a)%DAY+DAY)%DAY;} // minutes from a to b going forward
+  function num(v){if(v===''||v==null)return null;var n=parseFloat(v);return isNaN(n)||n<0?null:n;}
+  function fmt(m){var r=Math.round(m);return r+' min'+(r===1?'':'s');}
+  function clock(m){ // minutes since midnight (may exceed a day) -> "h:mm AM" (+Nd)
+    var days=Math.floor(m/DAY),x=((m%DAY)+DAY)%DAY,h=Math.floor(x/60),mi=x%60;
+    var ap=h>=12?'PM':'AM',h12=h%12||12;
+    var s=h12+':'+(mi<10?'0':'')+mi+' '+ap;
+    if(days>0)s+=' (+'+days+' day'+(days>1?'s':'')+')';
+    return s;
+  }
+  function pctText(p){return (Math.round(p*10)/10)+'%';}
+  function level(p){return p>=80?'good':p>=60?'mid':'bad';}
+  function nowStr(){var d=new Date();return (d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();}
+
+  /* ---------- Calculator ---------- */
+  function calc(){
+    var s=toMin(state.cStart),e=toMin(state.cEnd),f=num(state.cFocus);
+    var msg=$('c-msg'),res=$('c-res');
+    msg.className='msg';res.className='card result';
+    var set=function(win,net,pct,badge,fill){
+      $('c-win').textContent=win;$('c-net').textContent=net;$('c-pct').textContent=pct;
+      $('c-badge').textContent=badge;$('c-fill').style.width=fill+'%';$('c-bar').setAttribute('aria-valuenow',Math.round(fill));
+    };
+    if(s===null||e===null){set('–',f===null?'–':fmt(f),'–','Enter your session',0);return;}
+    var win=diff(s,e);
+    if(win===0){set('0 mins',f===null?'–':fmt(f),'–','Enter your session',0);
+      msg.textContent='Start and end are the same time, so the study window is 0 minutes.';msg.className='msg on';return;}
+    if(f===null){set(fmt(win),'–','–','Add your focused minutes',0);return;}
+    if(f>win){set(fmt(win),'–','–','Check your focused time',0);
+      msg.textContent='Focused time ('+fmt(f)+') can’t be longer than the study window ('+fmt(win)+').';msg.className='msg on';return;}
+    var p=f/win*100,lv=level(p);
+    var label=lv==='good'?'Optimal Focus':lv==='mid'?'Moderate Pace':'Needs Deep Focus';
+    set(fmt(win),fmt(f),pctText(p),label,p);
+    res.className='card result '+lv;
+  }
+
+  /* ---------- Recovery ---------- */
+  function rec(){
+    var s=toMin(state.rStart),e=toMin(state.rEnd),n=toMin(state.rNow),f=num(state.rFocus);
+    var t=Math.min(100,Math.max(1,parseFloat(state.rTarget)||80))/100;
+    var msg=$('r-msg'),out=$('r-res'),hint=$('r-focus-hint');
+    msg.className='msg';hint.textContent='';
+    var empty=function(t2){out.innerHTML='<div class="card empty">'+t2+'</div>';};
+    var err=function(t2){msg.textContent=t2;msg.className='msg on';out.innerHTML='';};
+    if(s===null||e===null||n===null||f===null){empty('Fill in your session times and focused minutes to see your plan.');return;}
+    var total=diff(s,e),elapsed=diff(s,n);
+    if(total===0){err('Session start and planned end are the same time, so the window is 0 minutes.');return;}
+    if(elapsed>total){err('The current time is after your planned end ('+clock(e)+'). Adjust the planned end or current time.');return;}
+    hint.textContent='So far: '+fmt(elapsed)+' elapsed.';
+    if(f>elapsed){err('Focused time ('+fmt(f)+') can’t exceed the time elapsed so far ('+fmt(elapsed)+').');return;}
+    var remaining=total-elapsed;
+    var cur=elapsed>0?f/elapsed*100:0;
+    var needTotal=t*total;
+    var need=needTotal-f;                       // focus minutes still required
+    var tp=Math.round(t*100);
+    var facts='<div class="facts"><div><span>Planned window</span><b>'+fmt(total)+'</b></div>'+
+      '<div><span>Time remaining</span><b>'+fmt(remaining)+'</b></div>'+
+      '<div><span>Efficiency so far</span><b>'+(elapsed>0?pctText(cur):'–')+'</b></div>'+
+      '<div><span>Target</span><b>'+tp+'%</b></div></div>';
+    var html;
+    if(need<=1e-9){
+      html='<div class="verdict good"><h2>Target already reached</h2>'+
+        '<p>You’ve focused '+fmt(f)+', which already covers '+tp+'% of your '+fmt(total)+' window. Anything more is a bonus.</p>'+facts+'</div>';
+    }else if(Math.ceil(need-1e-9)<=remaining){
+      var x=Math.ceil(need-1e-9);
+      html='<div class="verdict mid"><h2>Recoverable: focus without breaks</h2>'+
+        '<div class="big">'+fmt(x)+'</div><p>of uninterrupted focus starting now.</p>'+
+        '<p>You’ll hit '+tp+'% at <b>'+clock(n+x)+'</b>, with '+fmt(remaining-x)+' of slack before your planned end.</p>'+facts+'</div>';
+    }else{
+      var after=f+remaining; // focus if 100% from now to planned end
+      var body='';
+      if(t>=1){
+        body='<p>A 100% target needs every minute of the window focused, and that’s no longer possible. Even extending the session can’t fix it. Lower the target to see a plan.</p>';
+      }else{
+        var A=Math.ceil((needTotal-after)/(1-t)-1e-9);
+        if(A<0)A=0;
+        var newEnd=n+remaining+A; // minutes since midnight of the current day
+        body='<p>Even with 100% focus until your planned end ('+clock(e)+'), you’d reach only '+pctText(after/total*100)+'. You need '+fmt(need)+' more but only '+fmt(remaining)+' remain.</p>'+
+          '<div class="big">'+clock(newEnd)+'</div><p>is your new extended end time. That’s '+fmt(A)+' past the planned end, with uninterrupted focus from now to then ('+fmt(remaining+A)+').</p>';
+      }
+      html='<div class="verdict bad"><h2>Can’t recover by the planned end</h2>'+body+facts+'</div>';
+    }
+    out.innerHTML=html;
+  }
+
+  /* ---------- Wiring ---------- */
+  function bind(id,key,fn){
+    $(id).addEventListener('input',function(e){state[key]=e.target.value;if(key==='rNow'){state.rLive=false;liveUI();}save();fn();});
+  }
+  function liveUI(){
+    $('r-live-hint').textContent=state.rLive?'Following the live clock.':'Set manually. Tap “Use now” to follow the clock again.';
+    $('r-live').style.display=state.rLive?'none':'';
+  }
+  function tick(){
+    if(state.rLive){var v=nowStr();if(state.rNow!==v){state.rNow=v;$('r-now').value=v;save();rec();}}
+  }
+  function setTab(tab,instant){
+    state.tab=tab;save();
+    var panels={calc:$('p-calc'),rec:$('p-rec')};
+    for(var k in panels){
+      var p=panels[k],on=k===tab;
+      $('t-'+k).classList.toggle('active',on);
+      $('t-'+k).setAttribute('aria-selected',on);
+      if(on){p.classList.add('active');if(instant)p.classList.add('show');else{p.classList.remove('show');void p.offsetWidth;requestAnimationFrame(function(pp){return function(){pp.classList.add('show');};}(p));}}
+      else{p.classList.remove('active','show');}
+    }
+    $('sub').textContent=tab==='calc'?'Measure how much of your study window was truly focused.':'Find out what it takes to hit your target before the session ends.';
+    window.scrollTo(0,0);
+  }
+
+  load();
+  $('c-start').value=state.cStart;$('c-end').value=state.cEnd;$('c-focus').value=state.cFocus;
+  $('r-start').value=state.rStart;$('r-end').value=state.rEnd;$('r-focus').value=state.rFocus;
+  $('r-target').value=state.rTarget;$('r-tval').textContent=state.rTarget+'%';
+  if(state.rLive||!state.rNow){state.rLive=true;state.rNow=nowStr();}
+  $('r-now').value=state.rNow;liveUI();
+
+  bind('c-start','cStart',calc);bind('c-end','cEnd',calc);bind('c-focus','cFocus',calc);
+  bind('r-start','rStart',rec);bind('r-end','rEnd',rec);bind('r-now','rNow',rec);bind('r-focus','rFocus',rec);
+  $('r-target').addEventListener('input',function(e){state.rTarget=e.target.value;$('r-tval').textContent=e.target.value+'%';save();rec();});
+  $('r-live').addEventListener('click',function(){state.rLive=true;state.rNow=nowStr();$('r-now').value=state.rNow;liveUI();save();rec();});
+  document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){setTab(b.dataset.tab,false);});});
+
+  setTab(state.tab==='rec'?'rec':'calc',true);
+  calc();rec();
+  setInterval(tick,15000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)tick();});
+})();
+</script>
+</body>
+</html>
